@@ -1,0 +1,14 @@
+Open the main.unity scene.
+Remove Vuforia Components:
+Delete the ARCamera and ImageTarget GameObjects from the scene.
+Add ARFoundation Components:
+Add a new GameObject and name it AR Session. Add the ARSession component to it.
+Add another new GameObject and name it AR Session Origin. Add the ARSessionOrigin and ARTrackedImageManager components to it.
+Configure the ARTrackedImageManager:
+In the ARTrackedImageManager component, you will need to create a new XRReferenceImageLibrary and add your target images to it.
+Set the Max Number Of Moving Images to a value greater than 0 (e.g., 1).
+Configure the VideoController:
+Select the GameObject that has the VideoController script attached to it.
+Drag the ARTrackedImageManager from the AR Session Origin GameObject to the M Tracked Image Manager field in the VideoController's inspector.
+Ensure the M Video Player and M Hand Target fields are still correctly assigned.
+After completing these steps, the application should be ready to build and run with ARFoundation.
