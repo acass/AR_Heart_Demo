@@ -1,69 +1,80 @@
-﻿using UnityEngine;
-using Vuforia;
+using UnityEngine;
 using UnityEngine.Video;
+using UnityEngine.XR.ARFoundation;
+using UnityEngine.XR.ARSubsystems;
 
-public class VideoController : MonoBehaviour, ITrackableEventHandler {
+public class VideoController : MonoBehaviour
+{
+    [SerializeField]
+    private VideoPlayer mVideoPlayer;
 
-    protected TrackableBehaviour mTrackableBehaviour;
-    protected TrackableBehaviour.Status m_PreviousStatus;
-    protected TrackableBehaviour.Status m_NewStatus;
+    [SerializeField]
+    private GameObject mHandTarget;
 
-    public VideoPlayer mVideoPlayer;
-    public GameObject mHandTarget;
+    [SerializeField]
+    private ARTrackedImageManager m_TrackedImageManager;
 
-    protected virtual void Start() {
+    private bool _isAnyImageTracking = false;
 
-        mTrackableBehaviour = GetComponent<TrackableBehaviour>();
-        if (mTrackableBehaviour)
-            mTrackableBehaviour.RegisterTrackableEventHandler(this);
-    }
-
-    protected virtual void OnDestroy() {
-        
-        if (mTrackableBehaviour)
-            mTrackableBehaviour.UnregisterTrackableEventHandler(this);
-    }
-
-    public void OnTrackableStateChanged(
-        TrackableBehaviour.Status previousStatus,
-        TrackableBehaviour.Status newStatus)
+    private void OnEnable()
     {
-        m_PreviousStatus = previousStatus;
-        m_NewStatus = newStatus;
-        
-        Debug.Log("Trackable " + mTrackableBehaviour.TrackableName + 
-                  " " + mTrackableBehaviour.CurrentStatus +
-                  " -- " + mTrackableBehaviour.CurrentStatusInfo);
+        if (m_TrackedImageManager != null)
+        {
+            m_TrackedImageManager.trackedImagesChanged += OnTrackedImagesChanged;
+        }
+    }
 
-        if (newStatus == TrackableBehaviour.Status.DETECTED ||
-            newStatus == TrackableBehaviour.Status.TRACKED ||
-            newStatus == TrackableBehaviour.Status.EXTENDED_TRACKED)
+    private void OnDisable()
+    {
+        if (m_TrackedImageManager != null)
+        {
+            m_TrackedImageManager.trackedImagesChanged -= OnTrackedImagesChanged;
+        }
+    }
+
+    private void OnTrackedImagesChanged(ARTrackedImagesChangedEventArgs eventArgs)
+    {
+        bool isCurrentlyTracking = false;
+        // Check all trackables (tracked images)
+        foreach (var trackedImage in m_TrackedImageManager.trackables)
+        {
+            if (trackedImage.trackingState == TrackingState.Tracking)
+            {
+                isCurrentlyTracking = true;
+                // Move the video player to the tracked image's position and rotation.
+                // This assumes one video player controlled by any tracked image.
+                mVideoPlayer.transform.SetPositionAndRotation(trackedImage.transform.position, trackedImage.transform.rotation);
+                break; // Exit after finding the first tracked image.
+            }
+        }
+
+        if (isCurrentlyTracking && !_isAnyImageTracking)
         {
             OnTrackingFound();
         }
-        else if (previousStatus == TrackableBehaviour.Status.TRACKED &&
-                 newStatus == TrackableBehaviour.Status.NO_POSE)
+        else if (!isCurrentlyTracking && _isAnyImageTracking)
         {
             OnTrackingLost();
         }
-        else
-        {
-            OnTrackingLost();
-        }
+
+        _isAnyImageTracking = isCurrentlyTracking;
     }
 
-
-    protected virtual void OnTrackingFound() {
-
+    protected virtual void OnTrackingFound()
+    {
         mVideoPlayer.Play();
-        mHandTarget.SetActive(false);
+        if (mHandTarget != null)
+        {
+            mHandTarget.SetActive(false);
+        }
     }
 
-
-    protected virtual void OnTrackingLost() {
-
+    protected virtual void OnTrackingLost()
+    {
         mVideoPlayer.Pause();
-        mHandTarget.SetActive(true);
+        if (mHandTarget != null)
+        {
+            mHandTarget.SetActive(true);
+        }
     }
-
 }
